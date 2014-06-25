@@ -464,9 +464,13 @@ record_in_rewritten() {
 
 # Apply the changes introduced by the given commit to the current head.
 #
-# do_pick [--amend] [--file <file>] [--edit] <commit>
+# do_pick [--gpg-sign <keyid>] [--amend] [--file <file>] [--edit]
+#         <commit>
 #
 # Wrapper around git-cherry-pick.
+#
+# -S[<keyid>], --gpg-sign[=<keyid>]
+#     GPG-sign commit. This creates a fresh commit.
 #
 # --amend
 #     After picking <commit>, replace the current head commit with a new
@@ -501,6 +505,18 @@ do_pick () {
 	while test $# -gt 0
 	do
 		case "$1" in
+		-S|--gpg-sign)
+			rewrite=y
+			rewrite_gpg=
+			;;
+		-S*)
+			rewrite=y
+			rewrite_gpg=${1#-S}
+			;;
+		--gpg-sign=*)
+			rewrite=y
+			rewrite_gpg=${1#--gpg-sign=}
+			;;
 		--amend)
 			if test "$(git rev-parse HEAD)" = "$squash_onto" || ! git rev-parse --verify HEAD
 			then
@@ -568,6 +584,7 @@ do_pick () {
 			   ${rewrite_amend:+--amend} \
 			   ${rewrite_edit:+--edit} \
 			   ${rewrite_message:+--file "$rewrite_message"} \
+			   ${rewrite_gpg:+--gpg-sign="$rewrite_gpg"} \
 			   ${gpg_sign_opt:+"$gpg_sign_opt"} || return 3
 	fi
 
