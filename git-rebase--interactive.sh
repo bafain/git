@@ -464,10 +464,18 @@ record_in_rewritten() {
 
 # Apply the changes introduced by the given commit to the current head.
 #
-# do_pick [--gpg-sign <keyid>] [--amend] [--file <file>] [--edit]
-#         <commit>
+# do_pick [--reset-author] [--gpg-sign <keyid>] [--amend]
+#         [--file <file>] [--edit] <commit>
 #
 # Wrapper around git-cherry-pick.
+#
+# --reset-author
+#     Pretend the changes were made for the first time. Declare that the
+#     authorship of the resulting commit now belongs to the committer.
+#     This also renews the author timestamp. This creates a fresh
+#     commit.
+#
+#     _This is not a git-cherry-pick option._
 #
 # -S[<keyid>], --gpg-sign[=<keyid>]
 #     GPG-sign commit. This creates a fresh commit.
@@ -505,6 +513,10 @@ do_pick () {
 	while test $# -gt 0
 	do
 		case "$1" in
+		--reset-author)
+			rewrite=y
+			rewrite_author=y
+			;;
 		-S|--gpg-sign)
 			rewrite=y
 			rewrite_gpg=
@@ -578,12 +590,21 @@ do_pick () {
 		pick_one ${rewrite:+-n} $1 || return 1
 	fi
 
+	if test -n "$rewrite_author" && test -z "$rewrite_amend"
+	then
+		# keep rewrite flag to create a new commit, rewrite
+		# without --reset-author though because it can only be
+		# used with -C, -c or --amend
+		rewrite_author=
+	fi
+
 	if test -n "$rewrite"
 	then
 		git commit --allow-empty --no-post-rewrite -n --no-edit \
 			   ${rewrite_amend:+--amend} \
 			   ${rewrite_edit:+--edit} \
 			   ${rewrite_message:+--file "$rewrite_message"} \
+			   ${rewrite_author:+--reset-author} \
 			   ${rewrite_gpg:+--gpg-sign="$rewrite_gpg"} \
 			   ${gpg_sign_opt:+"$gpg_sign_opt"} || return 3
 	fi
