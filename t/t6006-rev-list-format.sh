@@ -35,17 +35,17 @@ test_expect_success 'setup' '
 	: >foo &&
 	git add foo &&
 	git config i18n.commitEncoding $test_encoding &&
-	git commit -m "$added_iso88591" &&
+	echo "$added_iso88591" | git commit -F - &&
 	head1=$(git rev-parse --verify HEAD) &&
 	head1_short=$(git rev-parse --verify --short $head1) &&
 	tree1=$(git rev-parse --verify HEAD:) &&
 	tree1_short=$(git rev-parse --verify --short $tree1) &&
 	echo "$changed" > foo &&
-	git commit -a -m "$changed_iso88591" &&
+	echo "$changed_iso88591" | git commit -a -F - &&
 	head2=$(git rev-parse --verify HEAD) &&
 	head2_short=$(git rev-parse --verify --short $head2) &&
 	tree2=$(git rev-parse --verify HEAD:) &&
-	tree2_short=$(git rev-parse --verify --short $tree2)
+	tree2_short=$(git rev-parse --verify --short $tree2) &&
 	git config --unset i18n.commitEncoding
 '
 
@@ -358,10 +358,7 @@ test_expect_success 'empty email' '
 	test_tick &&
 	C=$(GIT_AUTHOR_EMAIL= git commit-tree HEAD^{tree} </dev/null) &&
 	A=$(git show --pretty=format:%an,%ae,%ad%n -s $C) &&
-	test "$A" = "A U Thor,,Thu Apr 7 15:14:13 2005 -0700" || {
-		echo "Eh? $A" >failure
-		false
-	}
+	verbose test "$A" = "A U Thor,,Thu Apr 7 15:14:13 2005 -0700"
 '
 
 test_expect_success 'del LF before empty (1)' '
@@ -465,6 +462,12 @@ test_expect_success 'single-character name is parsed correctly' '
 	git commit --author="a <a@example.com>" --allow-empty -m foo &&
 	echo "a <a@example.com>" >expect &&
 	git log -1 --format="%an <%ae>" >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'unused %G placeholders are passed through' '
+	echo "%GX %G" >expect &&
+	git log -1 --format="%GX %G" >actual &&
 	test_cmp expect actual
 '
 
